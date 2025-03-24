@@ -14,14 +14,9 @@ use Pollora\Pollingo\DTO\TranslationString;
 use Pollora\Pollingo\Exceptions\MissingTargetLanguageException;
 use Pollora\Pollingo\Pollingo;
 
-/**
- * @var MockInterface&LegacyMockInterface&Translator<string>
- */
-$translator = null;
-
-beforeEach(function () use (&$translator) {
+beforeEach(function () {
     /** @var MockInterface&LegacyMockInterface&Translator<string> */
-    $translator = Mockery::mock(Translator::class);
+    $this->translator = Mockery::mock(Translator::class);
 });
 
 test('it can be instantiated with an API key', function () {
@@ -30,14 +25,14 @@ test('it can be instantiated with an API key', function () {
     expect($pollingo)->toBeInstanceOf(Pollingo::class);
 });
 
-test('it can be instantiated with a custom translator', function () use ($translator) {
+test('it can be instantiated with a custom translator', function () {
     /** @var Pollingo<string> */
-    $pollingo = Pollingo::make(translator: $translator);
+    $pollingo = Pollingo::make(translator: $this->translator);
     expect($pollingo)->toBeInstanceOf(Pollingo::class);
 });
 
 test('it throws an exception when neither API key nor translator is provided', function () {
-    expect(fn () => Pollingo::make())->toThrow(InvalidArgumentException::class);
+    expect(fn () => Pollingo::make(''))->toThrow(InvalidArgumentException::class);
 });
 
 test('it requires target language to be set', function () {
@@ -67,8 +62,8 @@ test('it groups strings correctly', function () {
         })
         ->andReturn([
             'test' => new TranslationGroup('test', [
-                'hello' => new TranslationString('Hello', 'Bonjour'),
-                'world' => new TranslationString('World', 'Monde'),
+                'hello' => new TranslationString('Hello', translatedText: 'Bonjour'),
+                'world' => new TranslationString('World', translatedText: 'Monde'),
             ]),
         ]);
 
@@ -102,7 +97,7 @@ test('it applies global context', function () {
         })
         ->andReturn([
             'test' => new TranslationGroup('test', [
-                'hello' => new TranslationString('Hello', 'Bonjour'),
+                'hello' => new TranslationString('Hello', translatedText: 'Bonjour'),
             ]),
         ]);
 
@@ -123,4 +118,63 @@ test('it applies global context', function () {
         ->toHaveKey('test')
         ->and($translations['test'])
         ->toHaveKey('hello');
+});
+
+test('it can translate a single text', function () {
+    /** @var MockInterface&LegacyMockInterface&Translator<string> */
+    $mockTranslator = Mockery::mock(Translator::class);
+    $mockTranslator->expects('translate')
+        ->withArgs(function (array $groups, string $targetLanguage, ?string $sourceLanguage, ?string $globalContext) {
+            return $targetLanguage === 'fr'
+                && $sourceLanguage === 'en'
+                && $globalContext === null
+                && isset($groups['single'])
+                && $groups['single']->getStrings()['text']->getText() === 'Hello';
+        })
+        ->andReturn([
+            'single' => new TranslationGroup('single', [
+                'text' => new TranslationString('Hello', translatedText: 'Bonjour'),
+            ]),
+        ]);
+
+    /** @var Pollingo<string> */
+    $pollingo = Pollingo::make(translator: $mockTranslator);
+
+    $translation = $pollingo
+        ->from('en')
+        ->to('fr')
+        ->text('Hello')
+        ->translate();
+
+    expect($translation)->toBe('Bonjour');
+});
+
+test('it can translate a single text with context', function () {
+    /** @var MockInterface&LegacyMockInterface&Translator<string> */
+    $mockTranslator = Mockery::mock(Translator::class);
+    $mockTranslator->expects('translate')
+        ->withArgs(function (array $groups, string $targetLanguage, ?string $sourceLanguage, ?string $globalContext) {
+            return $targetLanguage === 'fr'
+                && $sourceLanguage === 'en'
+                && $globalContext === 'Greeting message'
+                && isset($groups['single'])
+                && $groups['single']->getStrings()['text']->getText() === 'Hello';
+        })
+        ->andReturn([
+            'single' => new TranslationGroup('single', [
+                'text' => new TranslationString('Hello', translatedText: 'Bonjour'),
+            ]),
+        ]);
+
+    /** @var Pollingo<string> */
+    $pollingo = Pollingo::make(translator: $mockTranslator);
+
+    $translation = $pollingo
+        ->from('en')
+        ->to('fr')
+        ->text('Hello')
+        ->context('Greeting message')
+        ->translate();
+
+    expect($translation)->toBe('Bonjour');
 });

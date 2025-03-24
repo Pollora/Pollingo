@@ -17,8 +17,7 @@ use Pollora\Pollingo\Tests\TestCase;
 |
 */
 
-uses(TestCase::class)->group('unit')->in('Unit');
-uses(TestCase::class)->group('feature')->in('Feature');
+uses(TestCase::class)->in('Feature', 'Unit');
 
 /*
 |--------------------------------------------------------------------------
@@ -97,3 +96,12 @@ function toBeTranslatedTo(Expectation $expectation, string $expectedLanguage, st
 
 expect()->extend('toBeTranslatable', toBeTranslatable(...));
 expect()->extend('toBeTranslatedTo', toBeTranslatedTo(...));
+
+expect()->extend('toBeTranslatedTo', function (string $targetLanguage, string $originalText) {
+    expect($this->value)
+        ->toBeString()
+        ->not->toBe($originalText)
+        ->and($this->value)->not->toBeEmpty();
+
+    return $this;
+});

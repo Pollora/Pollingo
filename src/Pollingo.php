@@ -26,6 +26,8 @@ final class Pollingo
 
     private ?string $globalContext = null;
 
+    private ?string $singleText = null;
+
     private readonly LanguageCodeService $languageCodeService;
 
     /**
@@ -45,7 +47,7 @@ final class Pollingo
      */
     public static function make(string $apiKey = '', string $model = 'gpt-4o', ?Translator $translator = null): self
     {
-        if ($apiKey === null && $translator === null) {
+        if ($apiKey === '' && $translator === null) {
             throw new InvalidArgumentException('Either apiKey or translator must be provided');
         }
 
@@ -118,6 +120,23 @@ final class Pollingo
     }
 
     /**
+     * @return self<TKey>
+     */
+    public function text(string $text): self
+    {
+        $this->singleText = $text;
+        return $this;
+    }
+
+    /**
+     * @return self<TKey>
+     */
+    public function context(string $context): self
+    {
+        return $this->withGlobalContext($context);
+    }
+
+    /**
      * @param  array<TKey, string|array{text: string, context?: string}>  $strings
      * @return self<TKey>
      */
@@ -144,14 +163,27 @@ final class Pollingo
     }
 
     /**
-     * @return array<string, array<TKey, string>>
+     * @return array<string, array<TKey, string>>|string
      *
      * @throws MissingTargetLanguageException
      */
-    public function translate(): array
+    public function translate(): array|string
     {
         if (! $this->targetLanguage) {
             throw new MissingTargetLanguageException('Target language must be set before translating');
+        }
+
+        // Handle single text translation
+        if ($this->singleText !== null) {
+            $this->group('single', ['text' => $this->singleText]);
+            $result = $this->translator->translate(
+                groups: $this->groups,
+                targetLanguage: $this->targetLanguage,
+                sourceLanguage: $this->sourceLanguage,
+                globalContext: $this->globalContext,
+            );
+
+            return $result['single']->getStrings()['text']->getTranslatedText();
         }
 
         $translatedGroups = $this->translator->translate(

@@ -7,7 +7,7 @@ namespace Pollora\Pollingo\Tests;
 use Dotenv\Dotenv;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 
-final class TestCase extends BaseTestCase
+class TestCase extends BaseTestCase
 {
     protected function setUp(): void
     {
@@ -18,13 +18,25 @@ final class TestCase extends BaseTestCase
 
     private function loadEnvironmentVariables(): void
     {
-        // Try to load from .env file, fallback to .env.example if not found
-        $envFile = file_exists(__DIR__.'/../.env') ? '.env' : '.env.example';
+        // Load test environment variables
+        $envFiles = ['.env.testing', '.env'];
+        $basePath = __DIR__.'/../';
 
-        $dotenv = Dotenv::createImmutable(__DIR__.'/../');
-        $dotenv->load();
+        foreach ($envFiles as $file) {
+            if (file_exists($basePath . $file)) {
+                $dotenv = Dotenv::createImmutable($basePath, $file);
+                $dotenv->load();
+                break;
+            }
+        }
 
-        // Ensure required variables are set
-        $dotenv->required('OPENAI_API_KEY')->notEmpty();
+        // Set default test values if not set
+        if (!isset($_ENV['OPENAI_API_KEY'])) {
+            $_ENV['OPENAI_API_KEY'] = 'test-key';
+        }
+
+        if (!isset($_ENV['OPENAI_MODEL'])) {
+            $_ENV['OPENAI_MODEL'] = 'gpt-4';
+        }
     }
 }

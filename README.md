@@ -5,6 +5,7 @@ A framework-agnostic PHP package for translating groups of strings using OpenAI.
 ## 🚀 Features
 
 - ✨ Fluent API for submitting groups of strings to translate
+- 🔤 Simple API for translating single strings
 - 🤖 OpenAI-powered smart, contextual translations
 - 🔌 Support for custom translation providers
 - 🌐 Global and per-string context support
@@ -50,7 +51,28 @@ You can also customize the configuration in `config/pollingo.php` after publishi
 
 ## 📝 Basic Usage
 
-### Standalone Usage
+### Single String Translation
+
+```php
+use Pollora\Pollingo\Pollingo;
+
+// Simple translation
+$translation = Pollingo::make('your-openai-api-key')
+    ->from('en')
+    ->to('fr')
+    ->text('Welcome to our application')
+    ->translate();
+
+// Translation with context
+$translation = Pollingo::make('your-openai-api-key')
+    ->from('en')
+    ->to('fr')
+    ->text('Welcome to our platform!')
+    ->context('Used in the subject of a welcome email.')
+    ->translate();
+```
+
+### Group Translation
 
 ```php
 use Pollora\Pollingo\Pollingo;

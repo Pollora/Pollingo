@@ -1,0 +1,102 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.2', '8.3']
+      fail-fast: false
+
+    name: PHP ${{ matrix.php-version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
+          coverage: none
+
+      - name: Copy .env.testing
+        run: cp .env.testing .env
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        if: ${{ matrix.php-version == '8.2' }}
+        run: composer install --prefer-dist --no-progress --ignore-platform-req=php
+
+      - name: Install dependencies (PHP 8.3)
+        if: ${{ matrix.php-version == '8.3' }}
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run test suite (without OpenAI)
+        run: vendor/bin/pest --exclude-group openai
+
+  test-openai:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    strategy:
+      matrix:
+        php-version: ['8.2', '8.3']
+      fail-fast: false
+
+    name: PHP ${{ matrix.php-version }} (OpenAI)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
+          coverage: none
+
+      - name: Copy .env.testing
+        run: cp .env.testing .env
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        if: ${{ matrix.php-version == '8.2' }}
+        run: composer install --prefer-dist --no-progress --ignore-platform-req=php
+
+      - name: Install dependencies (PHP 8.3)
+        if: ${{ matrix.php-version == '8.3' }}
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run OpenAI tests
+        if: ${{ env.OPENAI_API_KEY != '' }}
+        run: vendor/bin/pest --group openai 
