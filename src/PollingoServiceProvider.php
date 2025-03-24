@@ -25,12 +25,23 @@ final class PollingoServiceProvider extends ServiceProvider
         $this->app->singleton(Pollingo::class, function ($app) {
             $config = $app['config']['pollingo'];
 
+            $apiKey = $config['openai_api_key'] ?? null;
+            // If apiKey is null, try to get it from nested structure
+            if ($apiKey === null && isset($config['openai']['api_key'])) {
+                $apiKey = $config['openai']['api_key'];
+            }
+
+            // Ensure apiKey is a string, not null, to avoid type error
+            $apiKey = $apiKey ?? '';
+
+            $model = $config['openai_model'] ?? $config['openai']['model'] ?? 'gpt-4o';
+
             /**
              * @var Pollingo<TKey> $pollingo
              */
             $pollingo = Pollingo::make(
-                apiKey: $config['openai_api_key'],
-                model: $config['openai_model'],
+                apiKey: $apiKey,
+                model: $model,
             );
 
             return $pollingo;
@@ -42,8 +53,8 @@ final class PollingoServiceProvider extends ServiceProvider
 
             /** @var OpenAITranslator<TKey> */
             $translator = new OpenAITranslator(
-                apiKey: $config['openai']['api_key'],
-                model: $config['openai']['model'],
+                apiKey: $config['openai']['api_key'] ?? '',
+                model: $config['openai']['model'] ?? 'gpt-4o',
             );
 
             return $translator;

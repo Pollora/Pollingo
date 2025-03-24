@@ -1,3 +1,5 @@
+<p align="center"><img src="public/logo.svg" width="80px" alt="Logo Laravel Pollingo"></p>
+
 # 🌍 Pollingo
 
 A framework-agnostic PHP package for translating groups of strings using OpenAI.

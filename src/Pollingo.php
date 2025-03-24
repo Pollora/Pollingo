@@ -45,9 +45,14 @@ final class Pollingo
      * @param  Translator<T>|null  $translator
      * @return self<T>
      */
-    public static function make(string $apiKey = '', string $model = 'gpt-4o', ?Translator $translator = null): self
+    public static function make(?string $apiKey = null, string $model = 'gpt-4o', ?Translator $translator = null): self
     {
-        if ($apiKey === '' && $translator === null) {
+        // Ensure apiKey is a valid string, even if empty
+        $apiKey = $apiKey ?? '';
+
+        // Only throw exception if both apiKey is empty AND translator is null
+        // This allows for blank string apiKeys if they're intentionally set that way in config
+        if (($apiKey === '' || $apiKey === null) && $translator === null) {
             throw new InvalidArgumentException('Either apiKey or translator must be provided');
         }
 
@@ -56,7 +61,7 @@ final class Pollingo
         }
 
         /** @var OpenAITranslator<T> */
-        $defaultTranslator = new OpenAITranslator($apiKey ?? '', $model);
+        $defaultTranslator = new OpenAITranslator($apiKey, $model);
 
         /** @var self<T> */
         return new self($defaultTranslator);
