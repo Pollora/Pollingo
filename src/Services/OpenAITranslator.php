@@ -24,7 +24,7 @@ final class OpenAITranslator implements Translator
 
     public function __construct(
         string $apiKey,
-        private readonly string $model = 'gpt-4',
+        private readonly string $model = 'gpt-4o',
     ) {
         $this->client = (new Factory())->withApiKey($apiKey)->make();
         $this->languageCodeService = new LanguageCodeService();
