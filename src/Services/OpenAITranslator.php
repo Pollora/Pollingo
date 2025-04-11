@@ -10,6 +10,7 @@ use Pollora\Pollingo\Contracts\Translator;
 use Pollora\Pollingo\DTO\TranslationGroup;
 use Pollora\Pollingo\DTO\TranslationString;
 use RuntimeException;
+use GuzzleHttp\Client as GuzzleClient;
 
 /**
  * @template TKey of string
@@ -25,8 +26,13 @@ final class OpenAITranslator implements Translator
     public function __construct(
         string $apiKey,
         private readonly string $model = 'gpt-4o',
+        private readonly int $timeout = 120 // default timeout in seconds
     ) {
-        $this->client = (new Factory())->withApiKey($apiKey)->make();
+        $httpClient = new GuzzleClient(['timeout' => $this->timeout]);
+        $this->client = (new Factory())
+            ->withApiKey($apiKey)
+            ->withHttpClient($httpClient)
+            ->make();
         $this->languageCodeService = new LanguageCodeService();
     }
 
@@ -71,6 +77,7 @@ final class OpenAITranslator implements Translator
                 ],
             ]);
 
+
             $content = $response->choices[0]->message->content;
             if ($content === null) {
                 throw new RuntimeException('Empty response from OpenAI API');
@@ -79,10 +86,11 @@ final class OpenAITranslator implements Translator
             $translations = json_decode($content, true);
 
             if (! is_array($translations)) {
+                dd($content);
                 throw new RuntimeException('Invalid JSON in response');
             }
 
-            // Verify translations are valid
+            // Verify that translations are different from the original text
             foreach ($translations as $key => $translation) {
                 if (! isset($strings[$key])) {
                     throw new RuntimeException(sprintf(
@@ -164,19 +172,18 @@ You are a professional translator with expertise in multiple languages.
 Your task is to translate text while preserving meaning and context.
 
 Important rules to follow:
-1. Translate the text to the target language, keeping the original text if it's already appropriate in the target language
+1. Always translate the text to the target language, never return it unchanged
 2. Preserve the meaning and context of each string
 3. Use appropriate translations based on context
 4. Return ONLY a valid JSON object with translations, nothing else
 5. Each key in the JSON must be exactly as provided in the input
 6. Your response must be a valid JSON object, starting with { and ending with }
+7. Do not include any Markdown or code block syntax in your response
 
 Example request:
-```
 Translate to French:
 - greeting: "Hello"
 - action: "Save"
-```
 
 Example response:
 {
@@ -184,16 +191,7 @@ Example response:
     "action": "Sauvegarder"
 }
 
-Common translations from English to French:
-- "Hello" → "Bonjour" or "Salut"
-- "Save" → "Sauvegarder" or "Enregistrer"
-- "Welcome" → "Bienvenue"
-- "Error occurred" → "Une erreur est survenue"
-- "Cancel" → "Annuler"
-- "Success" → "Succès"
-- "Operation completed" → "Opération terminée"
-
-IMPORTANT: Return ONLY the JSON object, no other text or explanations.
+IMPORTANT: Return ONLY the JSON object, no other text, explanations, or Markdown syntax.
 PROMPT;
     }
 }

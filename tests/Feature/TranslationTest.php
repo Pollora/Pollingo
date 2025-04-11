@@ -126,38 +126,3 @@ test('it can translate a single text with context', function () {
 
     expect($translation)->toBe('translated_Welcome');
 });
-
-test('it allows translations that are similar to the original text', function () {
-    $similarTranslator = new class implements Translator {
-        public function translate(array $groups, string $targetLanguage, ?string $sourceLanguage = null, ?string $globalContext = null): array
-        {
-            $result = [];
-            foreach ($groups as $groupName => $group) {
-                $translatedStrings = [];
-                foreach ($group->getStrings() as $key => $string) {
-                    // For some words like "OK" or "Menu", the translation might be the same in many languages
-                    $translatedStrings[$key] = new TranslationString(
-                        text: $string->getText(),
-                        translatedText: $string->getText(), // Same as original
-                        context: $string->getContext(),
-                    );
-                }
-                $result[$groupName] = new TranslationGroup($groupName, $translatedStrings);
-            }
-
-            return $result;
-        }
-    };
-
-    $pollingo = Pollingo::make(translator: $similarTranslator);
-    $translation = $pollingo
-        ->to('fr')
-        ->group('ui', [
-            'ok' => 'OK',
-            'menu' => 'Menu',
-        ])
-        ->translate();
-
-    expect($translation['ui']['ok'])->toBe('OK');
-    expect($translation['ui']['menu'])->toBe('Menu');
-});
