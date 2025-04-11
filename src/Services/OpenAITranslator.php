@@ -82,7 +82,7 @@ final class OpenAITranslator implements Translator
                 throw new RuntimeException('Invalid JSON in response');
             }
 
-            // Verify that translations are different from the original text
+            // Verify translations are valid
             foreach ($translations as $key => $translation) {
                 if (! isset($strings[$key])) {
                     throw new RuntimeException(sprintf(
@@ -94,10 +94,6 @@ final class OpenAITranslator implements Translator
 
                 if (! is_string($translation)) {
                     throw new RuntimeException("Invalid translation for key '{$key}': expected string, got ".gettype($translation));
-                }
-
-                if (mb_strtolower($translation) === mb_strtolower($strings[$key]['text'])) {
-                    throw new RuntimeException("Translation for '{$key}' is the same as the original text");
                 }
             }
 
@@ -168,13 +164,12 @@ You are a professional translator with expertise in multiple languages.
 Your task is to translate text while preserving meaning and context.
 
 Important rules to follow:
-1. Always translate the text to the target language, never return it unchanged
+1. Translate the text to the target language, keeping the original text if it's already appropriate in the target language
 2. Preserve the meaning and context of each string
 3. Use appropriate translations based on context
 4. Return ONLY a valid JSON object with translations, nothing else
 5. Each key in the JSON must be exactly as provided in the input
-6. Never return the original text unchanged
-7. Your response must be a valid JSON object, starting with { and ending with }
+6. Your response must be a valid JSON object, starting with { and ending with }
 
 Example request:
 ```
