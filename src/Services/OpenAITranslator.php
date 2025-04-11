@@ -10,6 +10,7 @@ use Pollora\Pollingo\Contracts\Translator;
 use Pollora\Pollingo\DTO\TranslationGroup;
 use Pollora\Pollingo\DTO\TranslationString;
 use RuntimeException;
+use GuzzleHttp\Client as GuzzleClient;
 
 /**
  * @template TKey of string
@@ -24,9 +25,14 @@ final class OpenAITranslator implements Translator
 
     public function __construct(
         string $apiKey,
-        private readonly string $model = 'gpt-4o',
+        private readonly string $model = 'gpt-4',
+        private readonly int $timeout = 30 // default timeout in seconds
     ) {
-        $this->client = (new Factory())->withApiKey($apiKey)->make();
+        $httpClient = new GuzzleClient(['timeout' => $this->timeout]);
+        $this->client = (new Factory())
+            ->withApiKey($apiKey)
+            ->withHttpClient($httpClient)
+            ->make();
         $this->languageCodeService = new LanguageCodeService();
     }
 
@@ -82,7 +88,7 @@ final class OpenAITranslator implements Translator
                 throw new RuntimeException('Invalid JSON in response');
             }
 
-            // Verify translations are valid
+            // Verify that translations are different from the original text
             foreach ($translations as $key => $translation) {
                 if (! isset($strings[$key])) {
                     throw new RuntimeException(sprintf(
@@ -94,6 +100,10 @@ final class OpenAITranslator implements Translator
 
                 if (! is_string($translation)) {
                     throw new RuntimeException("Invalid translation for key '{$key}': expected string, got ".gettype($translation));
+                }
+
+                if (mb_strtolower($translation) === mb_strtolower($strings[$key]['text'])) {
+                    throw new RuntimeException("Translation for '{$key}' is the same as the original text");
                 }
             }
 
@@ -164,7 +174,7 @@ You are a professional translator with expertise in multiple languages.
 Your task is to translate text while preserving meaning and context.
 
 Important rules to follow:
-1. Translate the text to the target language, keeping the original text if it's already appropriate in the target language
+1. Always translate the text to the target language, never return it unchanged
 2. Preserve the meaning and context of each string
 3. Use appropriate translations based on context
 4. Return ONLY a valid JSON object with translations, nothing else
@@ -183,15 +193,6 @@ Example response:
     "greeting": "Bonjour",
     "action": "Sauvegarder"
 }
-
-Common translations from English to French:
-- "Hello" → "Bonjour" or "Salut"
-- "Save" → "Sauvegarder" or "Enregistrer"
-- "Welcome" → "Bienvenue"
-- "Error occurred" → "Une erreur est survenue"
-- "Cancel" → "Annuler"
-- "Success" → "Succès"
-- "Operation completed" → "Opération terminée"
 
 IMPORTANT: Return ONLY the JSON object, no other text or explanations.
 PROMPT;
