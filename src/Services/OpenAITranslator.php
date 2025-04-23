@@ -4,36 +4,44 @@ declare(strict_types=1);
 
 namespace Pollora\Pollingo\Services;
 
+use GuzzleHttp\Client as GuzzleClient;
 use OpenAI\Client;
 use OpenAI\Factory;
+use Pollora\Pollingo\Contracts\AIClient;
 use Pollora\Pollingo\Contracts\Translator;
 use Pollora\Pollingo\DTO\TranslationGroup;
 use Pollora\Pollingo\DTO\TranslationString;
 use RuntimeException;
-use GuzzleHttp\Client as GuzzleClient;
 
 /**
  * @template TKey of string
  *
  * @implements Translator<TKey>
+ * @implements AIClient
  */
-final class OpenAITranslator implements Translator
+final class OpenAITranslator extends BaseAITranslator implements AIClient
 {
     private readonly Client $client;
-
-    private readonly LanguageCodeService $languageCodeService;
+    private readonly MessageBuilder $messageBuilder;
+    
+    protected readonly LanguageCodeService $languageCodeService;
+    protected readonly StringFormatter $stringFormatter;
+    protected readonly TranslationResponseParser $responseParser;
 
     public function __construct(
         string $apiKey,
-        private readonly string $model = 'gpt-4o',
-        private readonly int $timeout = 120 // default timeout in seconds
+        string $model = 'gpt-4_1-2025-04-14',
+        int $timeout = 120 // default timeout in seconds
     ) {
+        parent::__construct($model, $timeout);
+        
         $httpClient = new GuzzleClient(['timeout' => $this->timeout]);
         $this->client = (new Factory())
             ->withApiKey($apiKey)
             ->withHttpClient($httpClient)
             ->make();
-        $this->languageCodeService = new LanguageCodeService();
+            
+        $this->messageBuilder = new MessageBuilder();
     }
 
     /**
@@ -57,141 +65,49 @@ final class OpenAITranslator implements Translator
                 ];
             }
 
-            $response = $this->client->chat()->create([
-                'model' => $this->model,
-                'temperature' => 0.1,
-                'messages' => [
-                    [
-                        'role' => 'system',
-                        'content' => $this->getSystemPrompt(),
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $this->buildMessage(
-                            strings: $strings,
-                            targetLanguage: $targetLanguageName,
-                            sourceLanguage: $sourceLanguageName,
-                            globalContext: $globalContext,
-                        ),
-                    ],
-                ],
-            ]);
+            $userMessage = $this->stringFormatter->buildMessage(
+                strings: $strings,
+                targetLanguage: $targetLanguageName,
+                sourceLanguage: $sourceLanguageName,
+                globalContext: $globalContext,
+            );
 
+            $messages = $this->messageBuilder->buildMessages(
+                systemPrompt: $this->getSystemPrompt(),
+                userMessage: $userMessage
+            );
 
-            $content = $response->choices[0]->message->content;
-            if ($content === null) {
-                throw new RuntimeException('Empty response from OpenAI API');
-            }
+            $content = $this->chatCompletion(
+                model: $this->model,
+                messages: $messages
+            );
 
-            $translations = json_decode($content, true);
-
-            if (! is_array($translations)) {
-                dd($content);
-                throw new RuntimeException('Invalid JSON in response');
-            }
-
-            // Verify that translations are different from the original text
-            foreach ($translations as $key => $translation) {
-                if (! isset($strings[$key])) {
-                    throw new RuntimeException(sprintf(
-                        'Missing translation for key: %s. Available keys: %s',
-                        $key,
-                        implode(', ', array_keys($strings)),
-                    ));
-                }
-
-                if (! is_string($translation)) {
-                    throw new RuntimeException("Invalid translation for key '{$key}': expected string, got ".gettype($translation));
-                }
-            }
-
-            // Verify all strings are translated
-            foreach ($strings as $key => $string) {
-                if (! isset($translations[$key])) {
-                    throw new RuntimeException(sprintf(
-                        'Missing translation for key: %s. Available translations: %s',
-                        $key,
-                        implode(', ', array_keys($translations)),
-                    ));
-                }
-            }
-
-            /** @var array<TKey, TranslationString> */
-            $translatedStrings = [];
-            foreach ($translations as $key => $translation) {
-                /** @var TKey */
-                $typedKey = $key;
-                $translatedStrings[$typedKey] = new TranslationString(
-                    text: $strings[$key]['text'],
-                    translatedText: $translation,
-                    context: $strings[$key]['context'],
-                );
-            }
-
-            $result[$groupName] = new TranslationGroup($groupName, $translatedStrings);
+            $result[$groupName] = $this->responseParser->parseResponse(
+                content: $content,
+                groupName: $groupName,
+                strings: $strings,
+            );
         }
 
         return $result;
     }
 
     /**
-     * @param  array<string, array{text: string, context: string|null}>  $strings
+     * @inheritDoc
      */
-    private function buildMessage(array $strings, string $targetLanguage, ?string $sourceLanguage, ?string $globalContext): string
+    public function chatCompletion(string $model, array $messages, float $temperature = 0.1): string
     {
-        $message = 'Translate the following strings';
+        $response = $this->client->chat()->create([
+            'model' => $model,
+            'temperature' => $temperature,
+            'messages' => $messages,
+        ]);
 
-        if ($sourceLanguage) {
-            $message .= " from {$sourceLanguage}";
+        $content = $response->choices[0]->message->content;
+        if ($content === null) {
+            throw new RuntimeException('Empty response from OpenAI API');
         }
 
-        $message .= " to {$targetLanguage}:";
-
-        if ($globalContext) {
-            $message .= "\nGlobal context: {$globalContext}";
-        }
-
-        foreach ($strings as $key => $string) {
-            $message .= sprintf(
-                "\n- %s: \"%s\"%s",
-                $key,
-                $string['text'],
-                $string['context'] ? sprintf(' (context: %s)', $string['context']) : '',
-            );
-        }
-
-        $message .= "\n\nReturn ONLY a JSON object with the translations, no other text.";
-
-        return $message;
-    }
-
-    private function getSystemPrompt(): string
-    {
-        return <<<'PROMPT'
-You are a professional translator with expertise in multiple languages.
-Your task is to translate text while preserving meaning and context.
-
-Important rules to follow:
-1. Always translate the text to the target language, never return it unchanged
-2. Preserve the meaning and context of each string
-3. Use appropriate translations based on context
-4. Return ONLY a valid JSON object with translations, nothing else
-5. Each key in the JSON must be exactly as provided in the input
-6. Your response must be a valid JSON object, starting with { and ending with }
-7. Do not include any Markdown or code block syntax in your response
-
-Example request:
-Translate to French:
-- greeting: "Hello"
-- action: "Save"
-
-Example response:
-{
-    "greeting": "Bonjour",
-    "action": "Sauvegarder"
-}
-
-IMPORTANT: Return ONLY the JSON object, no other text, explanations, or Markdown syntax.
-PROMPT;
+        return $content;
     }
 }

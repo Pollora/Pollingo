@@ -34,6 +34,6 @@ return [
         | for the best results, but you can also use other models.
         |
         */
-        'model' => env('OPENAI_MODEL', 'gpt-4o'),
+        'model' => env('OPENAI_MODEL', 'gpt-4'),
     ],
 ];

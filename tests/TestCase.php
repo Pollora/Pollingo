@@ -36,7 +36,7 @@ class TestCase extends BaseTestCase
         }
 
         if (!isset($_ENV['OPENAI_MODEL'])) {
-            $_ENV['OPENAI_MODEL'] = 'gpt-4';
+            $_ENV['OPENAI_MODEL'] = 'gpt-4_1-2025-04-14';
         }
     }
 }

@@ -10,11 +10,14 @@ uses(HasOpenAIConfig::class)->group('openai', 'feature');
 
 beforeEach(function () {
     $this->skipIfNoOpenAIKey();
-    $this->pollingo = Pollingo::make($this->getOpenAIKey());
+    $this->pollingo = Pollingo::make(
+        apiKey: $this->getOpenAIKey(),
+        model: $this->getOpenAIModel()
+    );
 });
 
 test('it throws an exception when using an invalid API key', function () {
-    $pollingo = Pollingo::make('invalid-api-key');
+    $pollingo = Pollingo::make('invalid-api-key', $this->getOpenAIModel());
 
     expect(fn () => $pollingo
         ->from('en')

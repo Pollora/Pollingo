@@ -10,6 +10,7 @@ use Pollora\Pollingo\DTO\TranslationGroup;
 use Pollora\Pollingo\DTO\TranslationString;
 use Pollora\Pollingo\Exceptions\MissingTargetLanguageException;
 use Pollora\Pollingo\Services\LanguageCodeService;
+use Pollora\Pollingo\Services\OpenAIClient;
 use Pollora\Pollingo\Services\OpenAITranslator;
 
 /**
@@ -45,7 +46,7 @@ final class Pollingo
      * @param  Translator<T>|null  $translator
      * @return self<T>
      */
-    public static function make(?string $apiKey = null, string $model = 'gpt-4o', ?Translator $translator = null): self
+    public static function make(?string $apiKey = null, string $model = 'gpt-4_1-2025-04-14', ?Translator $translator = null): self
     {
         // Ensure apiKey is a valid string, even if empty
         $apiKey = $apiKey ?? '';

@@ -13,6 +13,7 @@ A framework-agnostic PHP package for translating groups of strings using OpenAI.
 - 🌐 Global and per-string context support
 - 🔤 Support for all ISO 639-1 language codes
 - 📦 Framework-agnostic with Laravel integration
+- 🧩 Modular architecture for easy extension with other AI providers
 
 ## 📥 Installation
 
@@ -38,6 +39,7 @@ Set your OpenAI API key in your environment:
 
 ```env
 OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=gpt-4
 ```
 
 ### Laravel Configuration
@@ -210,6 +212,45 @@ This is particularly useful when you want to:
 - Cache translations
 - Implement fallback mechanisms
 
+### Creating Custom AI Translators
+
+You can create custom AI translators by extending the `BaseAITranslator` class:
+
+```php
+use Pollora\Pollingo\Services\BaseAITranslator;
+use Pollora\Pollingo\Contracts\AIClient;
+
+class GoogleAITranslator extends BaseAITranslator implements AIClient
+{
+    private readonly GoogleClient $client;
+    
+    public function __construct(
+        string $apiKey,
+        string $model = 'gemini-pro',
+        int $timeout = 120
+    ) {
+        parent::__construct($model, $timeout);
+        $this->client = new GoogleClient($apiKey);
+    }
+    
+    public function translate(array $groups, string $targetLanguage, ?string $sourceLanguage = null, ?string $globalContext = null): array
+    {
+        // Implementation for Google AI translation
+    }
+    
+    public function chatCompletion(string $model, array $messages, float $temperature = 0.1): string
+    {
+        // Implementation for Google AI chat completion
+    }
+    
+    protected function getSystemPrompt(): string
+    {
+        // Optionally override the system prompt for Google AI
+        return parent::getSystemPrompt();
+    }
+}
+```
+
 ### Global Context
 
 You can provide global context that applies to all translations:
@@ -278,6 +319,12 @@ class TranslationService
 
 ```bash
 composer test
+```
+
+For testing with OpenAI, you need to set the following environment variables:
+
+```bash
+OPENAI_API_KEY=your-api-key OPENAI_MODEL=gpt-4 vendor/bin/pest
 ```
 
 ## 🤝 Contributing

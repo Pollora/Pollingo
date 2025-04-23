@@ -11,6 +11,11 @@ trait HasOpenAIConfig
         return $_ENV['OPENAI_API_KEY'] ?? null;
     }
 
+    protected function getOpenAIModel(): string
+    {
+        return $_ENV['OPENAI_MODEL'] ?? 'gpt-4';
+    }
+
     protected function hasOpenAIKey(): bool
     {
         $key = $this->getOpenAIKey();
