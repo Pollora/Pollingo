@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static \Pollora\Pollingo\Pollingo<TKey> from(string $language)
  * @method static \Pollora\Pollingo\Pollingo<TKey> to(string $language)
  * @method static \Pollora\Pollingo\Pollingo<TKey> withGlobalContext(string $context)
+ * @method static \Pollora\Pollingo\Pollingo<TKey> model(string $model)
+ * @method static \Pollora\Pollingo\Pollingo<TKey> timeout(int $timeout)
+ * @method static \Pollora\Pollingo\Pollingo<TKey> maxRetries(int $maxRetries)
+ * @method static \Pollora\Pollingo\Pollingo<TKey> retryDelay(int $retryDelay)
  * @method static \Pollora\Pollingo\Pollingo<TKey> group(string $name, array<TKey, string|array{text: string, context?: string}> $strings)
  * @method static array<string, array<TKey, string>> translate()
  *

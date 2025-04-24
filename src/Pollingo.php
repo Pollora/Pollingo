@@ -10,7 +10,6 @@ use Pollora\Pollingo\DTO\TranslationGroup;
 use Pollora\Pollingo\DTO\TranslationString;
 use Pollora\Pollingo\Exceptions\MissingTargetLanguageException;
 use Pollora\Pollingo\Services\LanguageCodeService;
-use Pollora\Pollingo\Services\OpenAIClient;
 use Pollora\Pollingo\Services\OpenAITranslator;
 
 /**
@@ -77,6 +76,109 @@ final class Pollingo
     public function withTranslator(Translator $translator): self
     {
         return new self($translator);
+    }
+    
+    /**
+     * Set the AI model to use for translation.
+     *
+     * @param string $model The model identifier (e.g. 'gpt-4', 'gpt-4.1-nano')
+     * @return self<TKey>
+     */
+    public function model(string $model): self
+    {
+        if ($this->translator instanceof OpenAITranslator) {
+            $this->translator->setModel($model);
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Set the timeout for API requests.
+     *
+     * @param int $timeout Timeout in seconds
+     * @return self<TKey>
+     */
+    public function timeout(int $timeout): self
+    {
+        if ($timeout <= 0) {
+            throw new \InvalidArgumentException('Timeout must be greater than 0');
+        }
+        
+        if ($this->translator instanceof OpenAITranslator) {
+            $this->translator->setTimeout($timeout);
+            
+            // Try to update the HTTP client's timeout if possible
+            try {
+                $reflection = new \ReflectionClass($this->translator);
+                $clientProperty = $reflection->getProperty('client');
+                $clientProperty->setAccessible(true);
+                $client = $clientProperty->getValue($this->translator);
+                
+                $clientReflection = new \ReflectionClass($client);
+                $httpClientProperty = $clientReflection->getProperty('httpClient');
+                
+                if ($httpClientProperty) {
+                    $httpClientProperty->setAccessible(true);
+                    $httpClient = $httpClientProperty->getValue($client);
+                    
+                    $httpClientReflection = new \ReflectionClass($httpClient);
+                    $configProperty = $httpClientReflection->getProperty('config');
+                    
+                    if ($configProperty) {
+                        $configProperty->setAccessible(true);
+                        $config = $configProperty->getValue($httpClient);
+                        
+                        if (is_array($config) && isset($config['timeout'])) {
+                            $config['timeout'] = $timeout;
+                            $configProperty->setValue($httpClient, $config);
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently continue if we can't update the HTTP client timeout
+            }
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Set the maximum number of retries for failed API requests.
+     *
+     * @param int $maxRetries Maximum number of retries
+     * @return self<TKey>
+     */
+    public function maxRetries(int $maxRetries): self
+    {
+        if ($maxRetries < 0) {
+            throw new \InvalidArgumentException('Maximum retries must be 0 or greater');
+        }
+        
+        if ($this->translator instanceof OpenAITranslator) {
+            $this->translator->setMaxRetries($maxRetries);
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * Set the delay between retries for failed API requests.
+     *
+     * @param int $retryDelay Delay in milliseconds
+     * @return self<TKey>
+     */
+    public function retryDelay(int $retryDelay): self
+    {
+        if ($retryDelay < 0) {
+            throw new \InvalidArgumentException('Retry delay must be 0 or greater');
+        }
+        
+        if ($this->translator instanceof OpenAITranslator) {
+            $this->translator->setRetryDelay($retryDelay);
+        }
+        
+        return $this;
     }
 
     /**

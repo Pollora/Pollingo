@@ -315,6 +315,48 @@ class TranslationService
 }
 ```
 
+### API Configuration and Reliability
+
+Pollingo provides methods to customize the OpenAI API configuration and enhance reliability with retries:
+
+```php
+// Select different AI models for different needs
+$translations = Pollingo::make('your-openai-api-key')
+    ->model('gpt-4.1-nano')  // Smaller, faster model for simple translations
+    ->from('en')
+    ->to('fr')
+    ->text('Hello world')
+    ->translate();
+
+// Set custom timeout for long translations
+$translations = Pollingo::make('your-openai-api-key')
+    ->timeout(180)  // 3 minutes timeout (default: 120 seconds)
+    ->from('en')
+    ->to('es')
+    ->group('legal', $legalTexts)  // Large legal documents
+    ->translate();
+
+// Configure retry behavior
+$translations = Pollingo::make('your-openai-api-key')
+    ->maxRetries(5)           // Number of retries on failure (default: 3)
+    ->retryDelay(2000)        // Milliseconds between retries (default: 1000)
+    ->from('en')
+    ->to('ja')
+    ->group('documents', $documents)
+    ->translate();
+
+// Chain configuration methods
+$translations = Pollingo::make('your-openai-api-key')
+    ->model('gpt-4.1-turbo')
+    ->timeout(240)
+    ->maxRetries(4)
+    ->retryDelay(1500)
+    ->from('en')
+    ->to('zh')
+    ->group('marketing', $marketingContent)
+    ->translate();
+```
+
 ## 🧪 Testing
 
 ```bash
