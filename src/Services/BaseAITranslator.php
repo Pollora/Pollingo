@@ -21,13 +21,13 @@ abstract class BaseAITranslator implements Translator
 
     /** @var string The AI model to use */
     protected string $model;
-    
+
     /** @var int Timeout in seconds */
     protected int $timeout;
-    
+
     /** @var int Maximum number of retries */
     protected int $maxRetries;
-    
+
     /** @var int Delay between retries in milliseconds */
     protected int $retryDelay;
 
@@ -41,7 +41,7 @@ abstract class BaseAITranslator implements Translator
         $this->timeout = $timeout;
         $this->maxRetries = $maxRetries;
         $this->retryDelay = $retryDelay;
-        
+
         $this->languageCodeService = new LanguageCodeService();
         $this->stringFormatter = new StringFormatter();
         $this->responseParser = new TranslationResponseParser();
@@ -55,7 +55,7 @@ abstract class BaseAITranslator implements Translator
 
     /**
      * Set the AI model to use for translation.
-     * 
+     *
      * @param string $model The AI model to use
      * @return self
      */
@@ -64,10 +64,10 @@ abstract class BaseAITranslator implements Translator
         $this->model = $model;
         return $this;
     }
-    
+
     /**
      * Set the timeout for API requests.
-     * 
+     *
      * @param int $timeout Timeout in seconds
      * @return self
      * @throws InvalidArgumentException If timeout is <= 0
@@ -77,14 +77,14 @@ abstract class BaseAITranslator implements Translator
         if ($timeout <= 0) {
             throw new InvalidArgumentException('Timeout must be greater than 0');
         }
-        
+
         $this->timeout = $timeout;
         return $this;
     }
-    
+
     /**
      * Set the maximum number of retries for failed API requests.
-     * 
+     *
      * @param int $maxRetries Maximum number of retries
      * @return self
      * @throws InvalidArgumentException If maxRetries is < 0
@@ -94,14 +94,14 @@ abstract class BaseAITranslator implements Translator
         if ($maxRetries < 0) {
             throw new InvalidArgumentException('Maximum retries must be 0 or greater');
         }
-        
+
         $this->maxRetries = $maxRetries;
         return $this;
     }
-    
+
     /**
      * Set the delay between retries for failed API requests.
-     * 
+     *
      * @param int $retryDelay Delay in milliseconds
      * @return self
      * @throws InvalidArgumentException If retryDelay is < 0
@@ -111,44 +111,44 @@ abstract class BaseAITranslator implements Translator
         if ($retryDelay < 0) {
             throw new InvalidArgumentException('Retry delay must be 0 or greater');
         }
-        
+
         $this->retryDelay = $retryDelay;
         return $this;
     }
-    
+
     /**
      * Get the current model.
-     * 
+     *
      * @return string
      */
     public function getModel(): string
     {
         return $this->model;
     }
-    
+
     /**
      * Get the current timeout.
-     * 
+     *
      * @return int Timeout in seconds
      */
     public function getTimeout(): int
     {
         return $this->timeout;
     }
-    
+
     /**
      * Get the maximum number of retries.
-     * 
+     *
      * @return int
      */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
-    
+
     /**
      * Get the delay between retries.
-     * 
+     *
      * @return int Delay in milliseconds
      */
     public function getRetryDelay(): int
@@ -163,8 +163,7 @@ abstract class BaseAITranslator implements Translator
     protected function getSystemPrompt(): string
     {
         return <<<'PROMPT'
-You are a professional translator with expertise in multiple languages.
-Your task is to translate text while preserving meaning and context.
+You are a professional translator. Translate all texts to the target language, preserving meaning and context.
 
 Important rules to follow:
 1. Always translate the text to the target language, never return it unchanged
@@ -173,6 +172,7 @@ Important rules to follow:
 4. Return translations using the following format for each key: [KEY:key_name]translated_text[/KEY]
 5. Each key in the response must be exactly as provided in the input
 6. Do not include any JSON format, Markdown or code block syntax in your response
+7. When handling textual content (JSON, HTML, etc.), strictly preserve escaped Unicode sequences such as \\u0022, \\u003e, \\u003c, etc. Do not convert them into their readable characters (like " or >) or into HTML entities (like &quot; or &gt;).
 
 Example request:
 Translate to French:
@@ -186,4 +186,4 @@ Example response:
 IMPORTANT: Return ONLY the translations in this format, no other text, explanations, or JSON syntax.
 PROMPT;
     }
-} 
+}

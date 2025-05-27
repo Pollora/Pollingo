@@ -20,7 +20,7 @@ final class StringFormatter
     public function formatStringsForPrompt(array $strings): string
     {
         $formattedStrings = '';
-        
+
         foreach ($strings as $key => $string) {
             $formattedStrings .= sprintf(
                 "\n- %s: \"%s\"%s",
@@ -29,10 +29,10 @@ final class StringFormatter
                 $string['context'] ? sprintf(' (context: %s)', $string['context']) : '',
             );
         }
-        
+
         return $formattedStrings;
     }
-    
+
     /**
      * Build the complete message for the OpenAI API.
      *
@@ -43,9 +43,9 @@ final class StringFormatter
      * @return string
      */
     public function buildMessage(
-        array $strings, 
-        string $targetLanguage, 
-        ?string $sourceLanguage, 
+        array $strings,
+        string $targetLanguage,
+        ?string $sourceLanguage,
         ?string $globalContext
     ): string {
         $message = 'Translate the following strings';
@@ -60,14 +60,17 @@ final class StringFormatter
             $message .= "\nGlobal context: {$globalContext}";
         }
 
+        $message .= "\n\n";
         $message .= $this->formatStringsForPrompt($strings);
-        $message .= "\n\nReturn the translations using the following format for each key:";
+        $message .= "\n\n";
+        $message .= "\n\nReturn ALL the key name translations using the following format for each key:";
         $message .= "\n[KEY:key_name]translated_text[/KEY]";
         $message .= "\n\nExample:";
         $message .= "\n[KEY:greeting]Bonjour[/KEY]";
         $message .= "\n[KEY:action]Sauvegarder[/KEY]";
-        $message .= "\n\nIMPORTANT: Return ONLY the translations in this format, no other text or explanations.";
+        $message .= "\n\nIMPORTANT: Return ONLY the translations in this format, no other text or explanations. Don't add key that are not in the input.";
+
 
         return $message;
     }
-} 
+}

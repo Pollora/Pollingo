@@ -77,7 +77,7 @@ final class Pollingo
     {
         return new self($translator);
     }
-    
+
     /**
      * Set the AI model to use for translation.
      *
@@ -89,10 +89,10 @@ final class Pollingo
         if ($this->translator instanceof OpenAITranslator) {
             $this->translator->setModel($model);
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Set the timeout for API requests.
      *
@@ -104,31 +104,31 @@ final class Pollingo
         if ($timeout <= 0) {
             throw new \InvalidArgumentException('Timeout must be greater than 0');
         }
-        
+
         if ($this->translator instanceof OpenAITranslator) {
             $this->translator->setTimeout($timeout);
-            
+
             // Try to update the HTTP client's timeout if possible
             try {
                 $reflection = new \ReflectionClass($this->translator);
                 $clientProperty = $reflection->getProperty('client');
                 $clientProperty->setAccessible(true);
                 $client = $clientProperty->getValue($this->translator);
-                
+
                 $clientReflection = new \ReflectionClass($client);
                 $httpClientProperty = $clientReflection->getProperty('httpClient');
-                
+
                 if ($httpClientProperty) {
                     $httpClientProperty->setAccessible(true);
                     $httpClient = $httpClientProperty->getValue($client);
-                    
+
                     $httpClientReflection = new \ReflectionClass($httpClient);
                     $configProperty = $httpClientReflection->getProperty('config');
-                    
+
                     if ($configProperty) {
                         $configProperty->setAccessible(true);
                         $config = $configProperty->getValue($httpClient);
-                        
+
                         if (is_array($config) && isset($config['timeout'])) {
                             $config['timeout'] = $timeout;
                             $configProperty->setValue($httpClient, $config);
@@ -139,10 +139,10 @@ final class Pollingo
                 // Silently continue if we can't update the HTTP client timeout
             }
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Set the maximum number of retries for failed API requests.
      *
@@ -154,14 +154,14 @@ final class Pollingo
         if ($maxRetries < 0) {
             throw new \InvalidArgumentException('Maximum retries must be 0 or greater');
         }
-        
+
         if ($this->translator instanceof OpenAITranslator) {
             $this->translator->setMaxRetries($maxRetries);
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Set the delay between retries for failed API requests.
      *
@@ -173,11 +173,11 @@ final class Pollingo
         if ($retryDelay < 0) {
             throw new \InvalidArgumentException('Retry delay must be 0 or greater');
         }
-        
+
         if ($this->translator instanceof OpenAITranslator) {
             $this->translator->setRetryDelay($retryDelay);
         }
-        
+
         return $this;
     }
 
@@ -230,7 +230,7 @@ final class Pollingo
     /**
      * @return self<TKey>
      */
-    public function text(string $text): self
+    public function text(?string $text): self
     {
         $this->singleText = $text;
         return $this;
@@ -251,7 +251,7 @@ final class Pollingo
     public function group(string $name, array $strings): self
     {
         $translationStrings = [];
-
+        
         foreach ($strings as $key => $value) {
             if (is_array($value)) {
                 $translationStrings[$key] = new TranslationString(

@@ -23,7 +23,7 @@ final class OpenAITranslator extends BaseAITranslator implements AIClient
 {
     private readonly Client $client;
     private readonly MessageBuilder $messageBuilder;
-    
+
     protected readonly LanguageCodeService $languageCodeService;
     protected readonly StringFormatter $stringFormatter;
     protected readonly TranslationResponseParser $responseParser;
@@ -34,13 +34,13 @@ final class OpenAITranslator extends BaseAITranslator implements AIClient
         int $timeout = 120 // default timeout in seconds
     ) {
         parent::__construct($model, $timeout);
-        
+
         $httpClient = new GuzzleClient(['timeout' => $this->timeout]);
         $this->client = (new Factory())
             ->withApiKey($apiKey)
             ->withHttpClient($httpClient)
             ->make();
-            
+
         $this->messageBuilder = new MessageBuilder();
     }
 
@@ -104,6 +104,7 @@ final class OpenAITranslator extends BaseAITranslator implements AIClient
         ]);
 
         $content = $response->choices[0]->message->content;
+
         if ($content === null) {
             throw new RuntimeException('Empty response from OpenAI API');
         }

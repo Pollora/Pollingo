@@ -22,7 +22,7 @@ final class PollingoServiceProvider extends ServiceProvider
         );
 
         // Register the main Pollingo service
-        $this->app->singleton(Pollingo::class, function ($app) {
+        $this->app->bind(Pollingo::class, function ($app) {
             $config = $app['config']['pollingo'];
 
             $apiKey = $config['openai_api_key'] ?? null;

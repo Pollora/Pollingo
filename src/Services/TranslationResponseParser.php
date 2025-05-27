@@ -10,7 +10,7 @@ use RuntimeException;
 
 /**
  * Service responsible for parsing translation responses from OpenAI.
- * 
+ *
  * @template TKey of string
  */
 final class TranslationResponseParser
@@ -29,19 +29,20 @@ final class TranslationResponseParser
         // Extract translations using regex pattern
         $pattern = '/\[KEY:([^\]]+)\](.*?)\[\/KEY\]/s';
         $matches = [];
-        
+
         if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
             throw new RuntimeException('Invalid response format. Expected [KEY:key_name]translation[/KEY] format.');
         }
-        
+
         $translations = [];
         foreach ($matches as $match) {
             $key = $match[1];
             $translation = $match[2];
             $translations[$key] = $translation;
         }
-        
+
         // Verify that all required keys are present
+
         foreach ($strings as $key => $string) {
             if (!isset($translations[$key])) {
                 throw new RuntimeException(sprintf(
@@ -51,18 +52,14 @@ final class TranslationResponseParser
                 ));
             }
         }
-        
+
         // Verify that no extra keys are present
         foreach ($translations as $key => $translation) {
             if (!isset($strings[$key])) {
-                throw new RuntimeException(sprintf(
-                    'Unexpected translation key: %s. Available keys: %s',
-                    $key,
-                    implode(', ', array_keys($strings)),
-                ));
+                unset($translations[$key]);
             }
         }
-        
+
         /** @var array<TKey, TranslationString> */
         $translatedStrings = [];
         foreach ($translations as $key => $translation) {
@@ -74,7 +71,7 @@ final class TranslationResponseParser
                 context: $strings[$key]['context'],
             );
         }
-        
+
         return new TranslationGroup($groupName, $translatedStrings);
     }
-} 
+}

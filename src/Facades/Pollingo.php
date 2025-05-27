@@ -29,4 +29,17 @@ final class Pollingo extends Facade
     {
         return \Pollora\Pollingo\Pollingo::class;
     }
+
+
+    /**
+     * Resolve a new instance for the facade
+     *
+     * @return mixed
+     */
+    public static function refresh()
+    {
+        static::clearResolvedInstance(static::getFacadeAccessor());
+
+        return static::getFacadeRoot();
+    }
 }
